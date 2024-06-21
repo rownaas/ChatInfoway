@@ -1,6 +1,12 @@
 #!/bin/bash
 
-echo "Configuração do ambiente"
+LOG_FILE="install_log.txt"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a $LOG_FILE
+}
+
+log "Início da configuração do ambiente"
 
 # Diretórios
 ROOT_DIR=$(pwd)
@@ -9,23 +15,57 @@ BACKEND_DIR="$ROOT_DIR/backend"
 
 # Verificar e instalar nvm se não estiver instalado
 if ! command -v nvm &> /dev/null; then
-    echo "Instalando NVM..."
+    log "Instalando NVM..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
     source ~/.nvm/nvm.sh
+else
+    log "NVM já está instalado"
 fi
 
 # Função para instalar Node.js e npm usando nvm
 install_node_version() {
     local version=$1
+    log "Instalando Node.js versão $version..."
     nvm install $version
     nvm use $version
+    log "Node.js versão $version instalado"
 }
+
+# Configurar fuso horário e atualizar o sistema
+log "Configurando fuso horário e atualizando o sistema..."
+sudo timedatectl set-timezone America/Sao_Paulo
+sudo apt update && sudo apt upgrade -y
+
+# Instalar e configurar Redis
+log "Instalando Redis..."
+sudo apt install -y redis-server
+sudo sed -i 's/^# requirepass .*/requirepass senhainformada/' /etc/redis/redis.conf
+sudo systemctl restart redis-server
+
+# Adicionar repositório RabbitMQ e instalar RabbitMQ
+log "Instalando RabbitMQ..."
+sudo add-apt-repository -y ppa:rabbitmq/rabbitmq-erlang
+wget -qO - https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.deb.sh | sudo bash
+sudo apt install -y rabbitmq-server
+sudo rabbitmq-plugins enable rabbitmq_management
+
+# Configurar usuário RabbitMQ
+log "Configurando RabbitMQ..."
+sudo rabbitmqctl add_user admin 123456
+sudo rabbitmqctl set_user_tags admin administrator
+sudo rabbitmqctl set_permissions -p / admin "." "." ".*"
+
+# Instalar Google Chrome
+log "Instalando Google Chrome..."
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y ./google-chrome-stable_current_amd64.deb
+rm -rf google-chrome-stable_current_amd64.deb
 
 # Perguntar qual ambiente configurar
 read -p "Qual ambiente deseja configurar? (frontend, backend, banco ou tudo): " ENVIRONMENT
 
 configure_frontend() {
-    echo "Configurando Frontend..."
+    log "Configurando Frontend..."
     if [ -d "$FRONTEND_DIR" ]; then
         cd "$FRONTEND_DIR"
         
@@ -33,28 +73,28 @@ configure_frontend() {
         install_node_version 16
 
         # Criar arquivo .env
-        echo "Criando arquivo .env..."
+        log "Criando arquivo .env para o frontend..."
         cat <<EOL > .env
 VUE_URL_API='http://localhost:3100'
 VUE_FACEBOOK_APP_ID='23156312477653241'
 EOL
     
         # Instalar dependências
-        echo "Instalando dependências do npm..."
-        npm install
+        log "Instalando dependências do npm para o frontend..."
+        npm install || { log 'Falha ao instalar dependências'; exit 1; }
     
         # Build do PWA
-        echo "Build do PWA..."
-        quasar build -m pwa
+        log "Build do PWA..."
+        npx quasar build -m pwa || { log 'Falha ao construir PWA'; exit 1; }
     
-        echo "Frontend configurado com sucesso!"
+        log "Frontend configurado com sucesso!"
     else
-        echo "Diretório frontend não encontrado!"
+        log "Diretório frontend não encontrado!"
     fi
 }
 
 configure_backend() {
-    echo "Configurando Backend..."
+    log "Configurando Backend..."
     if [ -d "$BACKEND_DIR" ]; then
         cd "$BACKEND_DIR"
         
@@ -99,7 +139,7 @@ configure_backend() {
         IO_REDIS_PASSWORD=${IO_REDIS_PASSWORD:-redis}
     
         # Criar arquivo .env
-        echo "Criando arquivo .env..."
+        log "Criando arquivo .env para o backend..."
         cat <<EOL > .env
 #NODE_ENV=prod
 
@@ -178,39 +218,37 @@ POSTGRES_POOL_IDLE
 EOL
     
         # Instalar dependências
-        echo "Instalando dependências do npm..."
-        npm install
+        log "Instalando dependências do npm para o backend..."
+        npm install || { log 'Falha ao instalar dependências'; exit 1; }
     
         # Build do backend
-        echo "Build do backend..."
-        npm run build
+        log "Build do backend..."
+        npm run build || { log 'Falha ao construir o backend'; exit 1; }
     
         # Rodar migrações e seeders do sequelize
-        echo "Rodando migrações e seeders do sequelize..."
-        npx sequelize db:migrate
-        npx sequelize db:seed:all
+        log "Rodando migrações e seeders do sequelize..."
+        npx sequelize db:migrate || { log 'Falha ao rodar migrações'; exit 1; }
+        npx sequelize db:seed:all || { log 'Falha ao rodar seeders'; exit 1; }
     
-        # Configurar PM2
-        echo "Configurando PM2..."
-        pm2 start ./dist/server.js --name BackEnd --cwd "$BACKEND_DIR"
+        # Instalar PM2 e configurar para rodar o backend
+        log "Instalando PM2..."
+        npm install -g pm2 || { log 'Falha ao instalar PM2'; exit 1; }
     
-        echo "Backend configurado com sucesso!"
+        log "Configurando PM2 para rodar o backend..."
+        pm2 start dist/server.js --name izing-api
+    
+        log "Backend configurado com sucesso!"
     else
-        echo "Diretório backend não encontrado!"
-        echo "Certifique-se de que o diretório backend existe e você tem permissão de acesso."
+        log "Diretório backend não encontrado!"
     fi
 }
 
 configure_database() {
-    echo "Configurando Banco de Dados..."
-    
-    # Instalar PostgreSQL
-    echo "Instalando PostgreSQL..."
-    sudo apt-get update
-    sudo apt-get install -y postgresql-14
+    log "Configurando Banco de Dados..."
+    sudo apt install -y postgresql-14
     
     # Configurar PostgreSQL
-    echo "Configurando PostgreSQL..."
+    log "Configurando PostgreSQL..."
     sudo -u postgres psql <<EOL
 CREATE USER postgres WITH PASSWORD 'postgres';
 CREATE DATABASE izing;
@@ -219,15 +257,15 @@ ALTER USER postgres WITH SUPERUSER;
 EOL
     
     # Permitir acesso de qualquer IP
-    echo "Permitindo acesso de qualquer IP..."
+    log "Permitindo acesso de qualquer IP..."
     sudo bash -c 'echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/14/main/pg_hba.conf'
-    sudo bash -c 'echo "listen_addresses = '*'" >> /etc/postgresql/14/main/postgresql.conf'
+    sudo bash -c 'echo "listen_addresses = '*'\" >> /etc/postgresql/14/main/postgresql.conf'
     
     # Reiniciar PostgreSQL
-    echo "Reiniciando PostgreSQL..."
+    log "Reiniciando PostgreSQL..."
     sudo systemctl restart postgresql
     
-    echo "Banco de Dados configurado com sucesso!"
+    log "Banco de Dados configurado com sucesso!"
 }
 
 if [ "$ENVIRONMENT" == "frontend" ]; then
@@ -241,5 +279,7 @@ elif [ "$ENVIRONMENT" == "tudo" ]; then
     configure_backend
     configure_database
 else
-    echo "Ambiente inválido. Saindo."
+    log "Ambiente inválido. Saindo."
 fi
+
+log "Configuração do ambiente concluída"

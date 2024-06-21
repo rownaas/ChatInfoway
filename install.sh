@@ -7,24 +7,19 @@ ROOT_DIR=$(pwd)
 FRONTEND_DIR="$ROOT_DIR/frontend"
 BACKEND_DIR="$ROOT_DIR/backend"
 
-# Verificar e instalar Node.js 16 e npm se não estiverem instalados
-if ! command -v npm &> /dev/null; then
-    echo "Instalando Node.js 16 e npm..."
-    curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+# Verificar e instalar nvm se não estiver instalado
+if ! command -v nvm &> /dev/null; then
+    echo "Instalando NVM..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+    source ~/.nvm/nvm.sh
 fi
 
-# Verificar e instalar Quasar CLI se não estiver instalado
-if ! command -v quasar &> /dev/null; then
-    echo "Instalando Quasar CLI..."
-    sudo npm install -g @quasar/cli
-fi
-
-# Verificar e instalar PM2 se não estiver instalado
-if ! command -v pm2 &> /dev/null; then
-    echo "Instalando PM2..."
-    sudo npm install -g pm2
-fi
+# Função para instalar Node.js e npm usando nvm
+install_node_version() {
+    local version=$1
+    nvm install $version
+    nvm use $version
+}
 
 # Perguntar qual ambiente configurar
 read -p "Qual ambiente deseja configurar? (frontend, backend, banco ou tudo): " ENVIRONMENT
@@ -33,7 +28,10 @@ configure_frontend() {
     echo "Configurando Frontend..."
     if [ -d "$FRONTEND_DIR" ]; then
         cd "$FRONTEND_DIR"
-    
+        
+        # Instalar e usar Node.js 16 para o frontend
+        install_node_version 16
+
         # Criar arquivo .env
         echo "Criando arquivo .env..."
         cat <<EOL > .env
@@ -59,6 +57,9 @@ configure_backend() {
     echo "Configurando Backend..."
     if [ -d "$BACKEND_DIR" ]; then
         cd "$BACKEND_DIR"
+        
+        # Instalar e usar Node.js 18 para o backend
+        install_node_version 18
     
         # Perguntar pelos parâmetros do backend
         read -p "URL do Backend [https://api.chat.infowayti.com.br]: " BACKEND_URL

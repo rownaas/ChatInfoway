@@ -5,7 +5,7 @@ echo "Configuração do ambiente"
 # Verificar e instalar Node.js e npm se não estiverem instalados
 if ! command -v npm &> /dev/null; then
     echo "Instalando Node.js e npm..."
-    curl -fsSL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
 

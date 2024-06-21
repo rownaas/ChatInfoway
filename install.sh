@@ -2,6 +2,11 @@
 
 echo "Configuração do ambiente"
 
+# Diretórios
+ROOT_DIR=$(pwd)
+FRONTEND_DIR="$ROOT_DIR/frontend"
+BACKEND_DIR="$ROOT_DIR/backend"
+
 # Verificar e instalar Node.js 16 e npm se não estiverem instalados
 if ! command -v npm &> /dev/null; then
     echo "Instalando Node.js 16 e npm..."
@@ -26,8 +31,8 @@ read -p "Qual ambiente deseja configurar? (frontend, backend, banco ou tudo): " 
 
 configure_frontend() {
     echo "Configurando Frontend..."
-    if [ -d "./frontend" ]; then
-        cd ./frontend
+    if [ -d "$FRONTEND_DIR" ]; then
+        cd "$FRONTEND_DIR"
     
         # Criar arquivo .env
         echo "Criando arquivo .env..."
@@ -46,14 +51,14 @@ EOL
     
         echo "Frontend configurado com sucesso!"
     else
-        echo "Diretório ./frontend não encontrado!"
+        echo "Diretório frontend não encontrado!"
     fi
 }
 
 configure_backend() {
     echo "Configurando Backend..."
-    if [ -d "./backend" ]; then
-        cd ./backend
+    if [ -d "$BACKEND_DIR" ]; then
+        cd "$BACKEND_DIR"
     
         # Perguntar pelos parâmetros do backend
         read -p "URL do Backend [https://api.chat.infowayti.com.br]: " BACKEND_URL
@@ -186,11 +191,12 @@ EOL
     
         # Configurar PM2
         echo "Configurando PM2..."
-        pm2 start ./dist/server.js --name BackEnd --cwd ./backend
+        pm2 start ./dist/server.js --name BackEnd --cwd "$BACKEND_DIR"
     
         echo "Backend configurado com sucesso!"
     else
-        echo "Diretório ./backend não encontrado!"
+        echo "Diretório backend não encontrado!"
+        echo "Certifique-se de que o diretório backend existe e você tem permissão de acesso."
     fi
 }
 

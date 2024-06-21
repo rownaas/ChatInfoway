@@ -2,79 +2,99 @@
 
 echo "Configuração do ambiente"
 
+# Verificar e instalar Node.js e npm se não estiverem instalados
+if ! command -v npm &> /dev/null; then
+    echo "Instalando Node.js e npm..."
+    curl -fsSL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+fi
+
+# Verificar e instalar Quasar CLI se não estiver instalado
+if ! command -v quasar &> /dev/null; then
+    echo "Instalando Quasar CLI..."
+    npm install -g @quasar/cli
+fi
+
+# Verificar e instalar PM2 se não estiver instalado
+if ! command -v pm2 &> /dev/null; then
+    echo "Instalando PM2..."
+    npm install -g pm2
+fi
+
 # Perguntar qual ambiente configurar
 read -p "Qual ambiente deseja configurar? (frontend, backend, banco ou tudo): " ENVIRONMENT
 
 configure_frontend() {
     echo "Configurando Frontend..."
-    cd ./frontend
+    if [ -d "./frontend" ]; then
+        cd ./frontend
     
-    # Criar arquivo .env
-    echo "Criando arquivo .env..."
-    cat <<EOL > .env
+        # Criar arquivo .env
+        echo "Criando arquivo .env..."
+        cat <<EOL > .env
 VUE_URL_API='http://localhost:3100'
 VUE_FACEBOOK_APP_ID='23156312477653241'
 EOL
     
-    # Instalar dependências
-    echo "Instalando dependências do npm..."
-    npm install
+        # Instalar dependências
+        echo "Instalando dependências do npm..."
+        npm install
     
-    # Instalar Quasar
-    echo "Instalando Quasar..."
-    npm install -g @quasar/cli
+        # Build do PWA
+        echo "Build do PWA..."
+        quasar build -m pwa
     
-    # Build do PWA
-    echo "Build do PWA..."
-    quasar build -m pwa
-    
-    echo "Frontend configurado com sucesso!"
+        echo "Frontend configurado com sucesso!"
+    else
+        echo "Diretório ./frontend não encontrado!"
+    fi
 }
 
 configure_backend() {
     echo "Configurando Backend..."
-    cd ./backend
+    if [ -d "./backend" ]; then
+        cd ./backend
     
-    # Perguntar pelos parâmetros do backend
-    read -p "URL do Backend [https://api.chat.infowayti.com.br]: " BACKEND_URL
-    BACKEND_URL=${BACKEND_URL:-https://api.chat.infowayti.com.br}
+        # Perguntar pelos parâmetros do backend
+        read -p "URL do Backend [https://api.chat.infowayti.com.br]: " BACKEND_URL
+        BACKEND_URL=${BACKEND_URL:-https://api.chat.infowayti.com.br}
     
-    read -p "URL do Frontend [https://chat.infowayti.com.br]: " FRONTEND_URL
-    FRONTEND_URL=${FRONTEND_URL:-https://chat.infowayti.com.br}
+        read -p "URL do Frontend [https://chat.infowayti.com.br]: " FRONTEND_URL
+        FRONTEND_URL=${FRONTEND_URL:-https://chat.infowayti.com.br}
     
-    read -p "Porta do Proxy [443]: " PROXY_PORT
-    PROXY_PORT=${PROXY_PORT:-443}
+        read -p "Porta do Proxy [443]: " PROXY_PORT
+        PROXY_PORT=${PROXY_PORT:-443}
     
-    read -p "Porta do Serviço Backend [8081]: " PORT
-    PORT=${PORT:-8081}
+        read -p "Porta do Serviço Backend [8081]: " PORT
+        PORT=${PORT:-8081}
     
-    read -p "Host do PostgreSQL [localhost]: " POSTGRES_HOST
-    POSTGRES_HOST=${POSTGRES_HOST:-localhost}
+        read -p "Host do PostgreSQL [localhost]: " POSTGRES_HOST
+        POSTGRES_HOST=${POSTGRES_HOST:-localhost}
     
-    read -p "Porta do PostgreSQL [5432]: " DB_PORT
-    DB_PORT=${DB_PORT:-5432}
+        read -p "Porta do PostgreSQL [5432]: " DB_PORT
+        DB_PORT=${DB_PORT:-5432}
     
-    read -p "Usuário do PostgreSQL [postgres]: " POSTGRES_USER
-    POSTGRES_USER=${POSTGRES_USER:-postgres}
+        read -p "Usuário do PostgreSQL [postgres]: " POSTGRES_USER
+        POSTGRES_USER=${POSTGRES_USER:-postgres}
     
-    read -p "Senha do PostgreSQL [postgres]: " POSTGRES_PASSWORD
-    POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+        read -p "Senha do PostgreSQL [postgres]: " POSTGRES_PASSWORD
+        POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
     
-    read -p "Banco de dados PostgreSQL [izing]: " POSTGRES_DB
-    POSTGRES_DB=${POSTGRES_DB:-izing}
+        read -p "Banco de dados PostgreSQL [izing]: " POSTGRES_DB
+        POSTGRES_DB=${POSTGRES_DB:-izing}
     
-    read -p "Host do Redis [127.0.0.1]: " IO_REDIS_SERVER
-    IO_REDIS_SERVER=${IO_REDIS_SERVER:-127.0.0.1}
+        read -p "Host do Redis [127.0.0.1]: " IO_REDIS_SERVER
+        IO_REDIS_SERVER=${IO_REDIS_SERVER:-127.0.0.1}
     
-    read -p "Porta do Redis [6379]: " IO_REDIS_PORT
-    IO_REDIS_PORT=${IO_REDIS_PORT:-6379}
+        read -p "Porta do Redis [6379]: " IO_REDIS_PORT
+        IO_REDIS_PORT=${IO_REDIS_PORT:-6379}
     
-    read -p "Senha do Redis [redis]: " IO_REDIS_PASSWORD
-    IO_REDIS_PASSWORD=${IO_REDIS_PASSWORD:-redis}
+        read -p "Senha do Redis [redis]: " IO_REDIS_PASSWORD
+        IO_REDIS_PASSWORD=${IO_REDIS_PASSWORD:-redis}
     
-    # Criar arquivo .env
-    echo "Criando arquivo .env..."
-    cat <<EOL > .env
+        # Criar arquivo .env
+        echo "Criando arquivo .env..."
+        cat <<EOL > .env
 #NODE_ENV=prod
 
 # ambiente
@@ -151,24 +171,27 @@ POSTGRES_POOL_ACQUIRE
 POSTGRES_POOL_IDLE
 EOL
     
-    # Instalar dependências
-    echo "Instalando dependências do npm..."
-    npm install
+        # Instalar dependências
+        echo "Instalando dependências do npm..."
+        npm install
     
-    # Build do backend
-    echo "Build do backend..."
-    npm run build
+        # Build do backend
+        echo "Build do backend..."
+        npm run build
     
-    # Rodar migrações e seeders do sequelize
-    echo "Rodando migrações e seeders do sequelize..."
-    npx sequelize db:migrate
-    npx sequelize db:seed:all
+        # Rodar migrações e seeders do sequelize
+        echo "Rodando migrações e seeders do sequelize..."
+        npx sequelize db:migrate
+        npx sequelize db:seed:all
     
-    # Configurar PM2
-    echo "Configurando PM2..."
-    pm2 start ./dist/server.js --name BackEnd --cwd ./backend
+        # Configurar PM2
+        echo "Configurando PM2..."
+        pm2 start ./dist/server.js --name BackEnd --cwd ./backend
     
-    echo "Backend configurado com sucesso!"
+        echo "Backend configurado com sucesso!"
+    else
+        echo "Diretório ./backend não encontrado!"
+    fi
 }
 
 configure_database() {

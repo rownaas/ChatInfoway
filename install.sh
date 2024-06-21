@@ -33,7 +33,6 @@ install_node_version() {
 
 # Configurar fuso horário e atualizar o sistema
 log "Configurando fuso horário e atualizando o sistema..."
-sudo timedatectl set-timezone America/Sao_Paulo
 sudo apt update && sudo apt upgrade -y
 
 # Instalar e configurar Redis
@@ -219,6 +218,7 @@ EOL
     
         # Instalar dependências
         log "Instalando dependências do npm para o backend..."
+        sudo chmod +x $(which node)
         npm install || { log 'Falha ao instalar dependências'; exit 1; }
     
         # Build do backend

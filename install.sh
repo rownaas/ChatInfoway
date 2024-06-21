@@ -2,9 +2,9 @@
 
 echo "Configuração do ambiente"
 
-# Verificar e instalar Node.js e npm se não estiverem instalados
+# Verificar e instalar Node.js 16 e npm se não estiverem instalados
 if ! command -v npm &> /dev/null; then
-    echo "Instalando Node.js e npm..."
+    echo "Instalando Node.js 16 e npm..."
     curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
@@ -12,13 +12,13 @@ fi
 # Verificar e instalar Quasar CLI se não estiver instalado
 if ! command -v quasar &> /dev/null; then
     echo "Instalando Quasar CLI..."
-    npm install -g @quasar/cli
+    sudo npm install -g @quasar/cli
 fi
 
 # Verificar e instalar PM2 se não estiver instalado
 if ! command -v pm2 &> /dev/null; then
     echo "Instalando PM2..."
-    npm install -g pm2
+    sudo npm install -g pm2
 fi
 
 # Perguntar qual ambiente configurar
